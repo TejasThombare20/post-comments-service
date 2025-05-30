@@ -27,9 +27,9 @@ type Comment struct {
 
 // CreateCommentRequest represents the request payload for creating a comment
 type CreateCommentRequest struct {
-	Content  string     `json:"content" validate:"required,min=1"`
-	PostID   uuid.UUID  `json:"post_id" validate:"required"`
-	ParentID *uuid.UUID `json:"parent_id" validate:"omitempty,uuid"`
+	Content  *string `json:"content" validate:"omitempty,min=1"`
+	PostID   *string `json:"post_id" validate:"omitempty,uuid"`
+	ParentID *string `json:"parent_id" validate:"omitempty,uuid"`
 }
 
 // UpdateCommentRequest represents the request payload for updating a comment

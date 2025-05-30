@@ -59,7 +59,6 @@ func (r *commentRepository) Create(comment *models.Comment) error {
 		INSERT INTO comments (id, content, post_id, parent_id, path, thread_id, created_by, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
-	// Convert path slice to PostgreSQL string array
 	pathArray := convertUUIDSliceToStringArray(comment.Path)
 
 	_, err := r.db.Exec(query,
@@ -74,19 +73,8 @@ func (r *commentRepository) Create(comment *models.Comment) error {
 	)
 
 	if err != nil {
-		utils.LogError("Failed to create comment", err, utils.LogFields{
-			"comment_id": comment.ID,
-			"post_id":    comment.PostID,
-			"created_by": comment.CreatedBy,
-		})
 		return utils.WrapError(err, "failed to create comment")
 	}
-
-	utils.LogInfo("Comment created successfully", utils.LogFields{
-		"comment_id": comment.ID,
-		"post_id":    comment.PostID,
-		"created_by": comment.CreatedBy,
-	})
 
 	return nil
 }
@@ -116,13 +104,10 @@ func (r *commentRepository) GetByID(id uuid.UUID) (*models.Comment, error) {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrCommentNotFound
 		}
-		utils.LogError("Failed to get comment by ID", err, utils.LogFields{"comment_id": id})
 		return nil, utils.WrapError(err, "failed to get comment by ID")
 	}
 
-	// Convert PostgreSQL string array to UUID slice
 	comment.Path = convertStringArrayToUUIDSlice(pathArray)
-
 	return &comment, nil
 }
 
@@ -161,14 +146,11 @@ func (r *commentRepository) GetByIDWithAuthor(id uuid.UUID) (*models.Comment, er
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrCommentNotFound
 		}
-		utils.LogError("Failed to get comment with author", err, utils.LogFields{"comment_id": id})
 		return nil, utils.WrapError(err, "failed to get comment with author")
 	}
 
-	// Convert PostgreSQL string array to UUID slice
 	comment.Path = convertStringArrayToUUIDSlice(pathArray)
 	comment.Author = &author
-
 	return &comment, nil
 }
 
@@ -203,7 +185,6 @@ func (r *commentRepository) Update(id uuid.UUID, updates *models.UpdateCommentRe
 
 	result, err := r.db.Exec(query, args...)
 	if err != nil {
-		utils.LogError("Failed to update comment", err, utils.LogFields{"comment_id": id})
 		return nil, utils.WrapError(err, "failed to update comment")
 	}
 
@@ -229,7 +210,6 @@ func (r *commentRepository) Delete(id uuid.UUID) error {
 
 	result, err := r.db.Exec(query, time.Now(), id)
 	if err != nil {
-		utils.LogError("Failed to delete comment", err, utils.LogFields{"comment_id": id})
 		return utils.WrapError(err, "failed to delete comment")
 	}
 
@@ -242,7 +222,6 @@ func (r *commentRepository) Delete(id uuid.UUID) error {
 		return utils.ErrCommentNotFound
 	}
 
-	utils.LogInfo("Comment deleted successfully", utils.LogFields{"comment_id": id})
 	return nil
 }
 
@@ -253,17 +232,12 @@ func (r *commentRepository) ListByPost(postID uuid.UUID, limit, offset int) ([]m
 		       u.id, u.username, u.email, u.display_name, u.avatar_url, u.created_at, u.updated_at
 		FROM comments c
 		LEFT JOIN users u ON c.created_by = u.id AND u.deleted_at IS NULL
-		WHERE c.post_id = $1 AND c.deleted_at IS NULL
-		ORDER BY c.created_at ASC
+		WHERE c.post_id = $1 AND c.deleted_at IS NULL AND c.parent_id IS NULL
+		ORDER BY c.created_at DESC
 		LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.Query(query, postID, limit, offset)
 	if err != nil {
-		utils.LogError("Failed to list comments by post", err, utils.LogFields{
-			"post_id": postID,
-			"limit":   limit,
-			"offset":  offset,
-		})
 		return nil, utils.WrapError(err, "failed to list comments by post")
 	}
 	defer rows.Close()
@@ -299,7 +273,6 @@ func (r *commentRepository) ListByPost(postID uuid.UUID, limit, offset int) ([]m
 			&authorUpdatedAt,
 		)
 		if err != nil {
-			utils.LogError("Failed to scan comment row", err, nil)
 			return nil, utils.WrapError(err, "failed to scan comment row")
 		}
 
@@ -329,7 +302,6 @@ func (r *commentRepository) ListByPost(postID uuid.UUID, limit, offset int) ([]m
 	}
 
 	if err = rows.Err(); err != nil {
-		utils.LogError("Error iterating comment rows", err, nil)
 		return nil, utils.WrapError(err, "error iterating comment rows")
 	}
 
@@ -349,11 +321,6 @@ func (r *commentRepository) GetReplies(parentID uuid.UUID, limit, offset int) ([
 
 	rows, err := r.db.Query(query, parentID, limit, offset)
 	if err != nil {
-		utils.LogError("Failed to get comment replies", err, utils.LogFields{
-			"parent_id": parentID,
-			"limit":     limit,
-			"offset":    offset,
-		})
 		return nil, utils.WrapError(err, "failed to get comment replies")
 	}
 	defer rows.Close()
@@ -389,7 +356,6 @@ func (r *commentRepository) GetReplies(parentID uuid.UUID, limit, offset int) ([
 			&authorUpdatedAt,
 		)
 		if err != nil {
-			utils.LogError("Failed to scan comment row", err, nil)
 			return nil, utils.WrapError(err, "failed to scan comment row")
 		}
 
@@ -419,7 +385,6 @@ func (r *commentRepository) GetReplies(parentID uuid.UUID, limit, offset int) ([
 	}
 
 	if err = rows.Err(); err != nil {
-		utils.LogError("Error iterating comment rows", err, nil)
 		return nil, utils.WrapError(err, "error iterating comment rows")
 	}
 

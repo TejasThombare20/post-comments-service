@@ -1,0 +1,114 @@
+repos:
+  # Go formatting and imports
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+        name: Go Format
+        description: Runs gofmt, requires golang
+        entry: gofmt
+        language: system
+        types: [go]
+        args: [-w]
+      
+      - id: go-imports
+        name: Go Imports
+        description: Runs goimports, requires golang
+        entry: goimports
+        language: system
+        types: [go]
+        args: [-w]
+      
+      - id: go-vet-mod
+        name: Go Vet
+        description: Runs go vet, requires golang
+        entry: go
+        language: system
+        types: [go]
+        args: [vet, ./...]
+        pass_filenames: false
+      
+      - id: go-mod-tidy
+        name: Go Mod Tidy
+        description: Runs go mod tidy, requires golang
+        entry: go
+        language: system
+        types: [go]
+        args: [mod, tidy]
+        pass_filenames: false
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        description: This hook trims trailing whitespace
+        entry: trailing-whitespace-fixer
+        language: system
+        types: [text]
+      
+      - id: end-of-file-fixer
+        name: Fix End of Files
+        description: Ensures that a file is either empty or ends with one newline
+        entry: end-of-file-fixer
+        language: system
+        types: [text]
+      
+      - id: check-yaml
+        name: Check YAML
+        description: This hook checks yaml files for parseable syntax
+        entry: check-yaml
+        language: system
+        types: [yaml]
+      
+      - id: check-json
+        name: Check JSON
+        description: This hook checks json files for parseable syntax
+        entry: check-json
+        language: system
+        types: [json]
+      
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        description: Check for files that contain merge conflict strings
+        entry: check-merge-conflict
+        language: system
+        types: [text]
+      
+      - id: check-added-large-files
+        name: Check for added large files
+        description: Prevent giant files from being committed
+        entry: check-added-large-files
+        language: system
+        args: ['--maxkb=1000']
+
+  # Go security checks
+  - repo: https://github.com/securecodewarrior/github-action-add-sarif
+    rev: v1.1.0
+    hooks:
+      - id: gosec
+        name: Go Security Check
+        description: Runs gosec security scanner
+        entry: gosec
+        language: system
+        types: [go]
+        args: [-fmt=json, -out=gosec-report.json, ./...]
+        pass_filenames: false
+
+  # Go linting with golangci-lint
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.54.2
+    hooks:
+      - id: golangci-lint
+        name: Go Lint
+        description: Runs golangci-lint
+        entry: golangci-lint
+        language: system
+        types: [go]
+        args: [run, --fix]
+        pass_filenames: false
+
+# Global settings
+default_stages: [commit]
+fail_fast: false 

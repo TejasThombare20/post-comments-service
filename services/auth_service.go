@@ -1,10 +1,10 @@
 package services
 
 import (
-	"errors"
-
 	"github.com/TejasThombare20/post-comments-service/models"
+	"github.com/TejasThombare20/post-comments-service/repository"
 	"github.com/TejasThombare20/post-comments-service/utils"
+	"github.com/TejasThombare20/post-comments-service/validator"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -13,202 +13,118 @@ import (
 type AuthService interface {
 	Register(req *models.RegisterRequest) (*models.AuthResponse, error)
 	Login(req *models.LoginRequest) (*models.AuthResponse, error)
-	RefreshToken(req *models.RefreshTokenRequest) (*models.AuthResponse, error)
+	RefreshToken(refreshToken string) (*models.AuthResponse, error)
 	ChangePassword(userID uuid.UUID, req *models.ChangePasswordRequest) error
-	ValidateToken(tokenString string) (*models.JWTClaims, error)
 }
 
 // authService implements AuthService interface
 type authService struct {
-	userService UserService
+	userRepo    repository.UserRepository
 	jwtService  *JWTService
+	userService UserService
+	validator   *validator.Validator
 }
 
 // NewAuthService creates a new authentication service instance
-func NewAuthService(userService UserService, jwtService *JWTService) AuthService {
-	utils.LogInfo("Initializing authentication service", utils.LogFields{
-		"component": "auth_service",
-	})
+func NewAuthService(userRepo repository.UserRepository, jwtService *JWTService, userService UserService, validator *validator.Validator) AuthService {
 	return &authService{
-		userService: userService,
+		userRepo:    userRepo,
 		jwtService:  jwtService,
+		userService: userService,
+		validator:   validator,
 	}
 }
 
 // Register creates a new user account and returns authentication tokens
 func (s *authService) Register(req *models.RegisterRequest) (*models.AuthResponse, error) {
-	utils.LogInfo("Starting user registration", utils.LogFields{
-		"username": req.Username,
-		"email":    req.Email,
-	})
+	if err := s.validator.ValidateStruct(req); err != nil {
+		return nil, err
+	}
 
-	// Convert RegisterRequest to CreateUserRequest
 	createUserReq := &models.CreateUserRequest{
 		Username:    req.Username,
 		Email:       req.Email,
 		Password:    req.Password,
 		DisplayName: req.DisplayName,
-		AvatarURL:   req.AvatarURL,
 	}
 
-	// Create the user
 	user, err := s.userService.CreateUser(createUserReq)
 	if err != nil {
-		utils.LogError("User registration failed", err, utils.LogFields{
-			"username": req.Username,
-			"email":    req.Email,
-		})
 		return nil, err
 	}
 
-	// Generate JWT tokens
 	authResponse, err := s.jwtService.GenerateTokenPair(user)
 	if err != nil {
-		utils.LogError("Token generation failed during registration", err, utils.LogFields{
-			"user_id":  user.ID,
-			"username": req.Username,
-		})
 		return nil, utils.WrapError(err, "failed to generate tokens")
 	}
-
-	utils.LogInfo("User registration completed successfully", utils.LogFields{
-		"user_id":  user.ID,
-		"username": req.Username,
-		"email":    req.Email,
-	})
 
 	return authResponse, nil
 }
 
 // Login authenticates a user and returns authentication tokens
 func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, error) {
-	utils.LogInfo("Starting user login", utils.LogFields{
-		"username": req.Username,
-	})
+	if err := s.validator.ValidateStruct(req); err != nil {
+		return nil, err
+	}
 
-	// Get user by username
-	user, err := s.userService.GetUserByUsername(req.Username)
+	user, err := s.userRepo.GetByUsername(req.Username)
 	if err != nil {
-		utils.LogError("User not found during login", err, utils.LogFields{
-			"username": req.Username,
-		})
 		return nil, utils.ErrInvalidCredentials
 	}
 
-	// Check if password hash exists
 	if user.PasswordHash == nil {
-		utils.LogError("User has no password hash", nil, utils.LogFields{
-			"user_id":  user.ID,
-			"username": req.Username,
-		})
 		return nil, utils.ErrInvalidCredentials
 	}
 
-	// Verify password
-	err = bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(req.Password))
-	if err != nil {
-		utils.LogError("Password verification failed during login", err, utils.LogFields{
-			"user_id":  user.ID,
-			"username": req.Username,
-		})
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, utils.ErrInvalidCredentials
 	}
 
-	// Generate JWT tokens
 	authResponse, err := s.jwtService.GenerateTokenPair(user)
 	if err != nil {
-		utils.LogError("Token generation failed during login", err, utils.LogFields{
-			"user_id":  user.ID,
-			"username": req.Username,
-		})
 		return nil, utils.WrapError(err, "failed to generate tokens")
 	}
-
-	utils.LogInfo("User login completed successfully", utils.LogFields{
-		"user_id":  user.ID,
-		"username": req.Username,
-	})
 
 	return authResponse, nil
 }
 
 // RefreshToken generates new tokens using a valid refresh token
-func (s *authService) RefreshToken(req *models.RefreshTokenRequest) (*models.AuthResponse, error) {
-	utils.LogInfo("Starting token refresh", utils.LogFields{
-		"refresh_token_length": len(req.RefreshToken),
-	})
-
-	authResponse, err := s.jwtService.RefreshToken(req.RefreshToken, s.userService)
+func (s *authService) RefreshToken(refreshToken string) (*models.AuthResponse, error) {
+	authResponse, err := s.jwtService.RefreshToken(refreshToken, s.userService)
 	if err != nil {
-		utils.LogError("Token refresh failed", err, nil)
 		return nil, err
 	}
-
-	utils.LogInfo("Token refresh completed successfully", utils.LogFields{
-		"user_id": authResponse.User.ID,
-	})
 
 	return authResponse, nil
 }
 
 // ChangePassword changes a user's password
 func (s *authService) ChangePassword(userID uuid.UUID, req *models.ChangePasswordRequest) error {
-	utils.LogInfo("Starting password change process", utils.LogFields{
-		"user_id": userID,
-	})
-
-	// Get the user
-	user, err := s.userService.GetUserByID(userID)
-	if err != nil {
-		utils.LogError("User not found for password change", err, utils.LogFields{
-			"user_id": userID,
-		})
+	if err := s.validator.ValidateStruct(req); err != nil {
 		return err
 	}
 
-	// Check if password hash exists
-	if user.PasswordHash == nil {
-		utils.LogError("User has no password set", nil, utils.LogFields{
-			"user_id": userID,
-		})
-		return errors.New("user has no password set")
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return err
 	}
 
-	// Verify current password
-	err = bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(req.CurrentPassword))
-	if err != nil {
-		utils.LogError("Current password verification failed", err, utils.LogFields{
-			"user_id": userID,
-		})
+	if user.PasswordHash == nil {
 		return utils.ErrInvalidCredentials
 	}
 
-	// Hash new password
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		return utils.ErrInvalidCredentials
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		utils.LogError("Failed to hash new password", err, utils.LogFields{
-			"user_id": userID,
-		})
 		return utils.WrapError(err, "failed to hash new password")
 	}
 
-	// Update user password
-	err = s.userService.UpdatePassword(userID, string(hashedPassword))
-	if err != nil {
-		utils.LogError("Failed to update user password", err, utils.LogFields{
-			"user_id": userID,
-		})
+	if err := s.userService.UpdatePassword(userID, string(hashedPassword)); err != nil {
 		return utils.WrapError(err, "failed to update password")
 	}
 
-	utils.LogInfo("Password changed successfully", utils.LogFields{
-		"user_id": userID,
-	})
-
 	return nil
-}
-
-// ValidateToken validates a JWT token and returns the claims
-func (s *authService) ValidateToken(tokenString string) (*models.JWTClaims, error) {
-	return s.jwtService.ValidateToken(tokenString)
 }

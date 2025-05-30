@@ -44,7 +44,7 @@ func main() {
 	postService := services.NewPostService(postRepo, userRepo)
 	commentService := services.NewCommentService(commentRepo, postRepo, userRepo, validator)
 	jwtService := services.NewJWTService()
-	authService := services.NewAuthService(userService, jwtService)
+	authService := services.NewAuthService(userRepo, jwtService, userService, validator)
 
 	// Initialize controllers
 	userController := controllers.NewUserController(userService)

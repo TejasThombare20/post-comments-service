@@ -49,19 +49,8 @@ func (r *postRepository) Create(post *models.Post) error {
 	)
 
 	if err != nil {
-		utils.LogError("Failed to create post", err, utils.LogFields{
-			"post_id":    post.ID,
-			"title":      post.Title,
-			"created_by": post.CreatedBy,
-		})
 		return utils.WrapError(err, "failed to create post")
 	}
-
-	utils.LogInfo("Post created successfully", utils.LogFields{
-		"post_id":    post.ID,
-		"title":      post.Title,
-		"created_by": post.CreatedBy,
-	})
 
 	return nil
 }
@@ -87,7 +76,6 @@ func (r *postRepository) GetByID(id uuid.UUID) (*models.Post, error) {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrPostNotFound
 		}
-		utils.LogError("Failed to get post by ID", err, utils.LogFields{"post_id": id})
 		return nil, utils.WrapError(err, "failed to get post by ID")
 	}
 
@@ -126,7 +114,6 @@ func (r *postRepository) GetByIDWithAuthor(id uuid.UUID) (*models.Post, error) {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrPostNotFound
 		}
-		utils.LogError("Failed to get post with author", err, utils.LogFields{"post_id": id})
 		return nil, utils.WrapError(err, "failed to get post with author")
 	}
 
@@ -136,24 +123,21 @@ func (r *postRepository) GetByIDWithAuthor(id uuid.UUID) (*models.Post, error) {
 
 // GetByIDWithComments retrieves a post by ID with comments and authors
 func (r *postRepository) GetByIDWithComments(id uuid.UUID) (*models.Post, error) {
-	// First get the post with author
 	post, err := r.GetByIDWithAuthor(id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Then get comments for this post
 	commentsQuery := `
 		SELECT c.id, c.content, c.post_id, c.parent_id, c.thread_id, c.created_by, c.created_at,
 		       u.id, u.username, u.email, u.display_name, u.avatar_url, u.created_at, u.updated_at
 		FROM comments c
 		LEFT JOIN users u ON c.created_by = u.id AND u.deleted_at IS NULL
-		WHERE c.post_id = $1 AND c.deleted_at IS NULL
-		ORDER BY c.created_at ASC`
+		WHERE c.post_id = $1 AND c.deleted_at IS NULL AND c.parent_id IS NULL
+		ORDER BY c.created_at DESC`
 
 	rows, err := r.db.Query(commentsQuery, id)
 	if err != nil {
-		utils.LogError("Failed to get comments for post", err, utils.LogFields{"post_id": id})
 		return nil, utils.WrapError(err, "failed to get comments for post")
 	}
 	defer rows.Close()
@@ -187,11 +171,9 @@ func (r *postRepository) GetByIDWithComments(id uuid.UUID) (*models.Post, error)
 			&authorUpdatedAt,
 		)
 		if err != nil {
-			utils.LogError("Failed to scan comment row", err, nil)
 			return nil, utils.WrapError(err, "failed to scan comment row")
 		}
 
-		// Set author if exists
 		if authorID.Valid {
 			authorUUID, _ := uuid.Parse(authorID.String)
 			author.ID = authorUUID
@@ -214,7 +196,6 @@ func (r *postRepository) GetByIDWithComments(id uuid.UUID) (*models.Post, error)
 	}
 
 	if err = rows.Err(); err != nil {
-		utils.LogError("Error iterating comment rows", err, nil)
 		return nil, utils.WrapError(err, "error iterating comment rows")
 	}
 
@@ -224,7 +205,6 @@ func (r *postRepository) GetByIDWithComments(id uuid.UUID) (*models.Post, error)
 
 // Update updates a post's information
 func (r *postRepository) Update(id uuid.UUID, updates *models.UpdatePostRequest) (*models.Post, error) {
-	// Build dynamic update query
 	setParts := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -242,16 +222,13 @@ func (r *postRepository) Update(id uuid.UUID, updates *models.UpdatePostRequest)
 	}
 
 	if len(setParts) == 0 {
-		// No updates to perform, just return the current post
 		return r.GetByIDWithAuthor(id)
 	}
 
-	// Add updated_at
 	setParts = append(setParts, fmt.Sprintf("updated_at = $%d", argIndex))
 	args = append(args, time.Now())
 	argIndex++
 
-	// Add WHERE clause
 	args = append(args, id)
 
 	query := fmt.Sprintf(`
@@ -264,7 +241,6 @@ func (r *postRepository) Update(id uuid.UUID, updates *models.UpdatePostRequest)
 
 	result, err := r.db.Exec(query, args...)
 	if err != nil {
-		utils.LogError("Failed to update post", err, utils.LogFields{"post_id": id})
 		return nil, utils.WrapError(err, "failed to update post")
 	}
 
@@ -277,7 +253,6 @@ func (r *postRepository) Update(id uuid.UUID, updates *models.UpdatePostRequest)
 		return nil, utils.ErrPostNotFound
 	}
 
-	// Return updated post with author
 	return r.GetByIDWithAuthor(id)
 }
 
@@ -290,7 +265,6 @@ func (r *postRepository) Delete(id uuid.UUID) error {
 
 	result, err := r.db.Exec(query, time.Now(), id)
 	if err != nil {
-		utils.LogError("Failed to delete post", err, utils.LogFields{"post_id": id})
 		return utils.WrapError(err, "failed to delete post")
 	}
 
@@ -303,7 +277,6 @@ func (r *postRepository) Delete(id uuid.UUID) error {
 		return utils.ErrPostNotFound
 	}
 
-	utils.LogInfo("Post deleted successfully", utils.LogFields{"post_id": id})
 	return nil
 }
 
@@ -320,10 +293,6 @@ func (r *postRepository) List(limit, offset int) ([]models.Post, error) {
 
 	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
-		utils.LogError("Failed to list posts", err, utils.LogFields{
-			"limit":  limit,
-			"offset": offset,
-		})
 		return nil, utils.WrapError(err, "failed to list posts")
 	}
 	defer rows.Close()
@@ -349,7 +318,6 @@ func (r *postRepository) List(limit, offset int) ([]models.Post, error) {
 			&author.UpdatedAt,
 		)
 		if err != nil {
-			utils.LogError("Failed to scan post row", err, nil)
 			return nil, utils.WrapError(err, "failed to scan post row")
 		}
 
@@ -358,7 +326,6 @@ func (r *postRepository) List(limit, offset int) ([]models.Post, error) {
 	}
 
 	if err = rows.Err(); err != nil {
-		utils.LogError("Error iterating post rows", err, nil)
 		return nil, utils.WrapError(err, "error iterating post rows")
 	}
 
@@ -378,11 +345,6 @@ func (r *postRepository) ListByUser(userID uuid.UUID, limit, offset int) ([]mode
 
 	rows, err := r.db.Query(query, userID, limit, offset)
 	if err != nil {
-		utils.LogError("Failed to list posts by user", err, utils.LogFields{
-			"user_id": userID,
-			"limit":   limit,
-			"offset":  offset,
-		})
 		return nil, utils.WrapError(err, "failed to list posts by user")
 	}
 	defer rows.Close()
@@ -408,7 +370,6 @@ func (r *postRepository) ListByUser(userID uuid.UUID, limit, offset int) ([]mode
 			&author.UpdatedAt,
 		)
 		if err != nil {
-			utils.LogError("Failed to scan post row", err, nil)
 			return nil, utils.WrapError(err, "failed to scan post row")
 		}
 
@@ -417,7 +378,6 @@ func (r *postRepository) ListByUser(userID uuid.UUID, limit, offset int) ([]mode
 	}
 
 	if err = rows.Err(); err != nil {
-		utils.LogError("Error iterating post rows", err, nil)
 		return nil, utils.WrapError(err, "error iterating post rows")
 	}
 

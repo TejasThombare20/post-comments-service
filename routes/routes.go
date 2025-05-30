@@ -47,7 +47,7 @@ func SetupRoutes(
 			users.GET("", userController.ListUsers)                            // GET /api/v1/users
 			users.GET("/username/:username", userController.GetUserByUsername) // GET /api/v1/users/username/:username
 			users.GET("/:userId/posts", postController.ListPostsByUser)        // GET /api/v1/users/:userId/posts
-			users.GET("/user/:id", userController.GetUser)                     // GET /api/v1/users/:id
+			users.GET("/user/:id", userController.GetUserByID)                 // GET /api/v1/users/:id
 		}
 
 		// Protected user routes (require authentication)
@@ -64,7 +64,7 @@ func SetupRoutes(
 			posts.GET("", postController.ListPosts)                                   // GET /api/v1/posts
 			posts.GET("/post/:id", postController.GetPost)                            // GET /api/v1/posts/:id
 			posts.GET("/post/:id/comments", postController.GetPostWithComments)       // GET /api/v1/posts/:id/comments
-			posts.GET("/post/:postId/comments", commentController.ListCommentsByPost) // GET /api/v1/posts/:postId/comments
+			posts.GET("/post-comments/:postId", commentController.ListCommentsByPost) // GET /api/v1/posts/:postId/comments
 		}
 
 		// Protected post routes (require authentication)
@@ -74,7 +74,7 @@ func SetupRoutes(
 			protectedPosts.POST("", postController.CreatePost)                             // POST /api/v1/posts
 			protectedPosts.PUT("/post/:id", postController.UpdatePost)                     // PUT /api/v1/posts/:id
 			protectedPosts.DELETE("/post/:id", postController.DeletePost)                  // DELETE /api/v1/posts/:id
-			protectedPosts.POST("/post/:postId/comments", commentController.CreateComment) // POST /api/v1/posts/:postId/comments
+			protectedPosts.POST("/post-comments/:postId", commentController.CreateComment) // POST /api/v1/posts/:postId/comments
 		}
 
 		// Public comment routes (read-only)

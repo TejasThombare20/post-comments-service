@@ -26,62 +26,35 @@ func NewCommentController(commentService services.CommentService) *CommentContro
 // CreateComment handles POST /posts/:postId/comments
 func (cc *CommentController) CreateComment(c *gin.Context) {
 	postIDParam := c.Param("postId")
-	utils.LogInfo("Creating new comment", utils.LogFields{
-		"post_id": postIDParam,
-	})
-
-	postID, err := uuid.Parse(postIDParam)
+	_, err := uuid.Parse(postIDParam)
 	if err != nil {
-		utils.LogError("Invalid post ID format for comment creation", err, utils.LogFields{
-			"post_id": postIDParam,
-		})
 		utils.ValidationErrorResponse(c, "Invalid post ID format")
 		return
 	}
 
 	userID, err := utils.GetUserIDFromContext(c)
 	if err != nil {
-		utils.LogError("User not authenticated for comment creation", err, utils.LogFields{
-			"post_id": postID,
-		})
 		utils.UnauthorizedResponse(c, "User not authenticated")
 		return
 	}
 
 	var req models.CreateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.LogError("Invalid request payload for comment creation", err, utils.LogFields{
-			"post_id": postID,
-			"user_id": userID,
-		})
 		utils.ValidationErrorResponse(c, "Invalid request payload: "+err.Error())
 		return
 	}
 
+	req.PostID = &postIDParam
+
 	comment, err := cc.commentService.CreateComment(userID, &req)
 	if err != nil {
 		if utils.IsNotFoundError(err) {
-			utils.LogError("Post not found for comment creation", err, utils.LogFields{
-				"post_id": postID,
-				"user_id": userID,
-			})
 			utils.NotFoundResponse(c, "Post")
 			return
 		}
-		utils.LogError("Failed to create comment", err, utils.LogFields{
-			"post_id": postID,
-			"user_id": userID,
-			"content": req.Content,
-		})
 		utils.InternalServerErrorResponse(c, utils.GetErrorMessages().InternalServerError)
 		return
 	}
-
-	utils.LogInfo("Comment created successfully", utils.LogFields{
-		"comment_id": comment.ID,
-		"post_id":    postID,
-		"user_id":    userID,
-	})
 
 	utils.SuccessResponse(c, http.StatusCreated, comment)
 }
@@ -89,15 +62,8 @@ func (cc *CommentController) CreateComment(c *gin.Context) {
 // GetComment handles GET /comments/:id
 func (cc *CommentController) GetComment(c *gin.Context) {
 	idParam := c.Param("id")
-	utils.LogInfo("Getting comment by ID", utils.LogFields{
-		"comment_id": idParam,
-	})
-
-	commentID, err := uuid.Parse(idParam)
+	_, err := uuid.Parse(idParam)
 	if err != nil {
-		utils.LogError("Invalid comment ID format", err, utils.LogFields{
-			"comment_id": idParam,
-		})
 		utils.ValidationErrorResponse(c, "Invalid comment ID format")
 		return
 	}
@@ -106,24 +72,12 @@ func (cc *CommentController) GetComment(c *gin.Context) {
 	comment, err := cc.commentService.GetCommentByID(req)
 	if err != nil {
 		if utils.IsNotFoundError(err) {
-			utils.LogError("Comment not found", err, utils.LogFields{
-				"comment_id": commentID,
-			})
 			utils.NotFoundResponse(c, "Comment")
 			return
 		}
-		utils.LogError("Failed to get comment", err, utils.LogFields{
-			"comment_id": commentID,
-		})
 		utils.InternalServerErrorResponse(c, utils.GetErrorMessages().InternalServerError)
 		return
 	}
-
-	utils.LogInfo("Comment retrieved successfully", utils.LogFields{
-		"comment_id": commentID,
-		"post_id":    comment.PostID,
-		"author":     comment.Author.Username,
-	})
 
 	utils.SuccessResponse(c, http.StatusOK, comment)
 }
@@ -131,34 +85,20 @@ func (cc *CommentController) GetComment(c *gin.Context) {
 // UpdateComment handles PUT /comments/:id
 func (cc *CommentController) UpdateComment(c *gin.Context) {
 	idParam := c.Param("id")
-	utils.LogInfo("Updating comment", utils.LogFields{
-		"comment_id": idParam,
-	})
-
 	commentID, err := uuid.Parse(idParam)
 	if err != nil {
-		utils.LogError("Invalid comment ID format for update", err, utils.LogFields{
-			"comment_id": idParam,
-		})
 		utils.ValidationErrorResponse(c, "Invalid comment ID format")
 		return
 	}
 
 	userID, err := utils.GetUserIDFromContext(c)
 	if err != nil {
-		utils.LogError("User not authenticated for comment update", err, utils.LogFields{
-			"comment_id": commentID,
-		})
 		utils.UnauthorizedResponse(c, "User not authenticated")
 		return
 	}
 
 	var req models.UpdateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.LogError("Invalid request payload for comment update", err, utils.LogFields{
-			"comment_id": commentID,
-			"user_id":    userID,
-		})
 		utils.ValidationErrorResponse(c, "Invalid request payload: "+err.Error())
 		return
 	}
@@ -166,34 +106,16 @@ func (cc *CommentController) UpdateComment(c *gin.Context) {
 	comment, err := cc.commentService.UpdateComment(commentID, userID, &req)
 	if err != nil {
 		if utils.IsNotFoundError(err) {
-			utils.LogError("Comment not found for update", err, utils.LogFields{
-				"comment_id": commentID,
-				"user_id":    userID,
-			})
 			utils.NotFoundResponse(c, "Comment")
 			return
 		}
 		if utils.IsForbiddenError(err) {
-			utils.LogError("User not authorized to update comment", err, utils.LogFields{
-				"comment_id": commentID,
-				"user_id":    userID,
-			})
 			utils.ForbiddenResponse(c, "You can only update your own comments")
 			return
 		}
-		utils.LogError("Failed to update comment", err, utils.LogFields{
-			"comment_id": commentID,
-			"user_id":    userID,
-		})
 		utils.InternalServerErrorResponse(c, utils.GetErrorMessages().InternalServerError)
 		return
 	}
-
-	utils.LogInfo("Comment updated successfully", utils.LogFields{
-		"comment_id": commentID,
-		"user_id":    userID,
-		"post_id":    comment.PostID,
-	})
 
 	utils.SuccessResponse(c, http.StatusOK, comment)
 }
@@ -201,24 +123,14 @@ func (cc *CommentController) UpdateComment(c *gin.Context) {
 // DeleteComment handles DELETE /comments/:id
 func (cc *CommentController) DeleteComment(c *gin.Context) {
 	idParam := c.Param("id")
-	utils.LogInfo("Deleting comment", utils.LogFields{
-		"comment_id": idParam,
-	})
-
-	commentID, err := uuid.Parse(idParam)
+	_, err := uuid.Parse(idParam)
 	if err != nil {
-		utils.LogError("Invalid comment ID format for deletion", err, utils.LogFields{
-			"comment_id": idParam,
-		})
 		utils.ValidationErrorResponse(c, "Invalid comment ID format")
 		return
 	}
 
 	userID, err := utils.GetUserIDFromContext(c)
 	if err != nil {
-		utils.LogError("User not authenticated for comment deletion", err, utils.LogFields{
-			"comment_id": commentID,
-		})
 		utils.UnauthorizedResponse(c, "User not authenticated")
 		return
 	}
@@ -227,33 +139,16 @@ func (cc *CommentController) DeleteComment(c *gin.Context) {
 	err = cc.commentService.DeleteComment(req, userID)
 	if err != nil {
 		if utils.IsNotFoundError(err) {
-			utils.LogError("Comment not found for deletion", err, utils.LogFields{
-				"comment_id": commentID,
-				"user_id":    userID,
-			})
 			utils.NotFoundResponse(c, "Comment")
 			return
 		}
 		if utils.IsForbiddenError(err) {
-			utils.LogError("User not authorized to delete comment", err, utils.LogFields{
-				"comment_id": commentID,
-				"user_id":    userID,
-			})
 			utils.ForbiddenResponse(c, "You can only delete your own comments")
 			return
 		}
-		utils.LogError("Failed to delete comment", err, utils.LogFields{
-			"comment_id": commentID,
-			"user_id":    userID,
-		})
 		utils.InternalServerErrorResponse(c, utils.GetErrorMessages().InternalServerError)
 		return
 	}
-
-	utils.LogInfo("Comment deleted successfully", utils.LogFields{
-		"comment_id": commentID,
-		"user_id":    userID,
-	})
 
 	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Comment deleted successfully"})
 }
@@ -266,7 +161,6 @@ func (cc *CommentController) ListCommentsByPost(c *gin.Context) {
 		return
 	}
 
-	// Parse query parameters
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
 
@@ -298,7 +192,6 @@ func (cc *CommentController) ListCommentsByPost(c *gin.Context) {
 		return
 	}
 
-	// Convert to response format
 	commentResponses := make([]models.CommentResponse, len(comments))
 	for i, comment := range comments {
 		commentResponses[i] = comment.ToResponse()
@@ -321,7 +214,6 @@ func (cc *CommentController) GetCommentReplies(c *gin.Context) {
 		return
 	}
 
-	// Parse query parameters
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
 
@@ -347,7 +239,6 @@ func (cc *CommentController) GetCommentReplies(c *gin.Context) {
 		return
 	}
 
-	// Convert to response format
 	replyResponses := make([]models.CommentResponse, len(replies))
 	for i, reply := range replies {
 		replyResponses[i] = reply.ToResponse()

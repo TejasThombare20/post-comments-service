@@ -135,7 +135,7 @@ func (ac *AuthController) RefreshToken(c *gin.Context) {
 	}
 
 	// Refresh token
-	authResponse, err := ac.authService.RefreshToken(&req)
+	authResponse, err := ac.authService.RefreshToken(req.RefreshToken)
 	if err != nil {
 		utils.UnauthorizedResponse(c, "Invalid refresh token")
 		return

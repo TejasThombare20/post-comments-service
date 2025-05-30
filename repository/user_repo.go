@@ -51,17 +51,8 @@ func (r *userRepository) Create(user *models.User) error {
 	)
 
 	if err != nil {
-		utils.LogError("Failed to create user", err, utils.LogFields{
-			"user_id":  user.ID,
-			"username": user.Username,
-		})
 		return utils.WrapError(err, "failed to create user")
 	}
-
-	utils.LogInfo("User created", utils.LogFields{
-		"user_id":  user.ID,
-		"username": user.Username,
-	})
 
 	return nil
 }
@@ -89,7 +80,6 @@ func (r *userRepository) GetByID(id uuid.UUID) (*models.User, error) {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrUserNotFound
 		}
-		utils.LogError("Failed to get user by ID", err, utils.LogFields{"user_id": id})
 		return nil, utils.WrapError(err, "failed to get user by ID")
 	}
 
@@ -119,7 +109,6 @@ func (r *userRepository) GetByUsername(username string) (*models.User, error) {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrUserNotFound
 		}
-		utils.LogError("Failed to get user by username", err, utils.LogFields{"username": username})
 		return nil, utils.WrapError(err, "failed to get user by username")
 	}
 
@@ -149,7 +138,6 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrUserNotFound
 		}
-		utils.LogError("Failed to get user by email", err, utils.LogFields{"email": email})
 		return nil, utils.WrapError(err, "failed to get user by email")
 	}
 
@@ -204,7 +192,6 @@ func (r *userRepository) Update(id uuid.UUID, updates *models.UpdateUserRequest)
 
 	result, err := r.db.Exec(query, args...)
 	if err != nil {
-		utils.LogError("Failed to update user", err, utils.LogFields{"user_id": id})
 		return nil, utils.WrapError(err, "failed to update user")
 	}
 
@@ -230,7 +217,6 @@ func (r *userRepository) UpdatePassword(id uuid.UUID, hashedPassword string) err
 
 	result, err := r.db.Exec(query, hashedPassword, id)
 	if err != nil {
-		utils.LogError("Failed to update user password", err, utils.LogFields{"user_id": id})
 		return utils.WrapError(err, "failed to update user password")
 	}
 
@@ -243,7 +229,6 @@ func (r *userRepository) UpdatePassword(id uuid.UUID, hashedPassword string) err
 		return utils.ErrUserNotFound
 	}
 
-	utils.LogInfo("User password updated successfully", utils.LogFields{"user_id": id})
 	return nil
 }
 
@@ -256,7 +241,6 @@ func (r *userRepository) Delete(id uuid.UUID) error {
 
 	result, err := r.db.Exec(query, time.Now(), id)
 	if err != nil {
-		utils.LogError("Failed to delete user", err, utils.LogFields{"user_id": id})
 		return utils.WrapError(err, "failed to delete user")
 	}
 
@@ -269,7 +253,6 @@ func (r *userRepository) Delete(id uuid.UUID) error {
 		return utils.ErrUserNotFound
 	}
 
-	utils.LogInfo("User deleted successfully", utils.LogFields{"user_id": id})
 	return nil
 }
 
@@ -284,10 +267,6 @@ func (r *userRepository) List(limit, offset int) ([]models.User, error) {
 
 	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
-		utils.LogError("Failed to list users", err, utils.LogFields{
-			"limit":  limit,
-			"offset": offset,
-		})
 		return nil, utils.WrapError(err, "failed to list users")
 	}
 	defer rows.Close()
@@ -306,14 +285,12 @@ func (r *userRepository) List(limit, offset int) ([]models.User, error) {
 			&user.UpdatedAt,
 		)
 		if err != nil {
-			utils.LogError("Failed to scan user row", err, nil)
 			return nil, utils.WrapError(err, "failed to scan user row")
 		}
 		users = append(users, user)
 	}
 
 	if err = rows.Err(); err != nil {
-		utils.LogError("Error iterating user rows", err, nil)
 		return nil, utils.WrapError(err, "error iterating user rows")
 	}
 

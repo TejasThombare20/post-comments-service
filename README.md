@@ -1,238 +1,385 @@
 # Post-Comments Backend Service
 
-A modular, production-grade backend service built with **Go (Golang)**, **Gin framework**, and **PostgreSQL** for managing users, posts, and nested comments.
+A modular, production-grade backend service built with **Go (Golang)**, **Gin framework**, and **PostgreSQL** for managing users, posts, and nested comments with comprehensive development tools and containerization support.
+
+## 📚 Documentation
+
+- **[API Documentation](API.md)** - Comprehensive API reference with examples
+- **[Architecture Guide](ARCHITECTURE.md)** - System architecture, database design, and nested comments implementation
+- **[Setup Instructions](#setup-instructions)** - Getting started with Docker and local development
 
 ## 🚀 Features
 
-- **User Management**: Create, read, update, and delete users
-- **Post Management**: Create, read, update, and delete posts
+- **User Management**: Create, read, update, and delete users with authentication
+- **Post Management**: Create, read, update, and delete posts with author information
 - **Nested Comments**: Support for threaded comments with unlimited nesting
+- **JWT Authentication**: Secure authentication with access and refresh tokens
 - **Clean Architecture**: Modular design with separation of concerns
 - **Professional Logging**: Structured logging with middleware
 - **Error Handling**: Comprehensive error handling with custom error types
 - **Database Migrations**: SQL migrations with indexes for performance
 - **CORS Support**: Cross-origin resource sharing enabled
-- **Input Validation**: Request validation using Gin's binding
+- **Input Validation**: Request validation using custom validators
 - **Pagination**: Built-in pagination support for list endpoints
-- **JWT Authentication**: Secure authentication with access and refresh tokens
-- **Authorization**: Role-based access control for protected endpoints
+- **HTML Sanitization**: Safe HTML content processing for comments
+- **Configuration Validation**: Startup validation for all environment variables
+- **Development Tools**: Pre-commit hooks, linting, formatting, and testing tools
+- **Containerization**: Docker support for easy deployment and development
 
 ## 📁 Project Structure
 
 ```
 post-comments-service/
 ├── cmd/
-│   └── main.go                 # Application entrypoint
+│   └── main.go                    # Application entrypoint
 ├── config/
-│   └── config.go              # Database and environment configuration
+│   └── config.go                  # Configuration management with validation
 ├── controllers/
-│   ├── user_controller.go     # User HTTP handlers
-│   └── post_controller.go     # Post HTTP handlers
+│   ├── auth_controller.go         # Authentication HTTP handlers
+│   ├── user_controller.go         # User HTTP handlers
+│   ├── post_controller.go         # Post HTTP handlers
+│   └── comment_controller.go      # Comment HTTP handlers
 ├── models/
-│   ├── user.go               # User model and DTOs
-│   ├── post.go               # Post model and DTOs
-│   └── comment.go            # Comment model and DTOs
+│   ├── user.go                    # User model and DTOs
+│   ├── post.go                    # Post model and DTOs
+│   ├── comment.go                 # Comment model and DTOs
+│   └── auth.go                    # Authentication models
 ├── services/
-│   ├── user_service.go       # User business logic
-│   └── post_service.go       # Post business logic
+│   ├── auth_service.go            # Authentication business logic
+│   ├── user_service.go            # User business logic
+│   ├── post_service.go            # Post business logic
+│   ├── comment_service.go         # Comment business logic
+│   └── jwt_service.go             # JWT token management
 ├── repository/
-│   ├── user_repo.go          # User data access layer
-│   └── post_repo.go          # Post data access layer
+│   ├── user_repo.go               # User data access layer
+│   ├── post_repo.go               # Post data access layer
+│   └── comment_repo.go            # Comment data access layer
 ├── routes/
-│   └── routes.go             # Route definitions
+│   └── routes.go                  # Route definitions
 ├── middleware/
-│   ├── logger.go             # Logging middleware
-│   └── auth.go               # Authentication middleware
+│   ├── logger.go                  # Logging middleware
+│   ├── auth.go                    # Authentication middleware
+│   └── cors.go                    # CORS middleware
 ├── utils/
-│   ├── response.go           # Standard API response helpers
-│   └── error_handler.go      # Error handling utilities
+│   ├── response.go                # Standard API response helpers
+│   ├── error_handler.go           # Error handling utilities
+│   ├── auth_helpers.go            # Authentication utilities
+│   └── html_sanitizer.go          # HTML content sanitization
+├── validator/
+│   └── validator.go               # Custom validation logic
 ├── migrations/
-│   └── 001_init.sql          # Database schema migration
-├── go.mod                    # Go module definition
-├── go.sum                    # Go module checksums
-├── .env.example              # Environment variables example
-└── README.md                 # This file
+│   └── 001_init.sql               # Database schema migration
+├── .pre-commit-config.yaml        # Pre-commit hooks configuration
+├── .golangci.yml                  # Go linting configuration
+├── Dockerfile                     # Docker container configuration
+├── docker-compose.yml             # Docker Compose for development
+├── Makefile                       # Development automation tasks
+├── go.mod                         # Go module definition
+├── go.sum                         # Go module checksums
+├── .env.example                   # Environment variables example
+├── API.md                         # Comprehensive API documentation
+└── README.md                      # This file
 ```
 
 ## 🛠️ Setup Instructions
 
 ### Prerequisites
 
-- Go 1.21 or higher
-- PostgreSQL 12 or higher
-- Git
+- **Go 1.21+** (for non-Docker setup)
+- **Docker & Docker Compose** (for Docker setup)
+- **PostgreSQL 12+** (for non-Docker setup)
+- **Git**
 
-### 1. Clone the Repository
+### Option 1: Docker Setup (Recommended)
+
+This is the easiest way to get started with the project.
+
+#### 1. Clone the Repository
 
 ```bash
 git clone <repository-url>
 cd post-comments-service
 ```
 
-### 2. Install Dependencies
+#### 2. Environment Configuration
 
 ```bash
+cp .env.example .env
+# Edit .env file with your preferred settings
+```
+
+#### 3. Start with Docker Compose
+
+```bash
+# Start all services (database, app, redis, adminer)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+
+# Stop services
+docker-compose down
+```
+
+#### 4. Access the Application
+
+- **API**: http://localhost:8080
+- **Health Check**: http://localhost:8080/health
+- **Database Admin (Adminer)**: http://localhost:8081
+- **Redis**: localhost:6379
+
+### Option 2: Local Development Setup
+
+#### 1. Clone and Install Dependencies
+
+```bash
+git clone <repository-url>
+cd post-comments-service
+
+# Install Go dependencies
 go mod tidy
+
+# Install development tools
+make install-tools
 ```
 
-### 3. Database Setup
+#### 2. Database Setup
 
-1. Create a PostgreSQL database:
-```sql
-CREATE DATABASE post_comments_db;
-```
-
-2. Run the migration:
 ```bash
-psql -U postgres -d post_comments_db -f migrations/001_init.sql
+# Create PostgreSQL database
+createdb post_comments_db
+
+# Run migrations
+make migrate-up
 ```
 
-### 4. Environment Configuration
+#### 3. Environment Configuration
 
-1. Copy the example environment file:
 ```bash
 cp .env.example .env
 ```
 
-2. Update the `.env` file with your database credentials:
+Edit `.env` with your database credentials:
 ```env
+# Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=your_password
 DB_NAME=post_comments_db
 DB_SSLMODE=disable
+
+# Server Configuration
 PORT=8080
+ENVIRONMENT=development
+LOG_LEVEL=info
+DEBUG=true
+
+# JWT Configuration (REQUIRED)
+JWT_SECRET_KEY=your-super-secret-jwt-key-that-is-at-least-32-characters-long
+JWT_ACCESS_TOKEN_DURATION=15m
+JWT_REFRESH_TOKEN_DURATION=168h
+
+# Database Pool Configuration
+DB_MAX_OPEN_CONNS=25
+DB_MAX_IDLE_CONNS=5
+DB_CONN_MAX_LIFETIME=5m
+
+# Server Timeouts
+SERVER_READ_TIMEOUT=15s
+SERVER_WRITE_TIMEOUT=15s
+SERVER_IDLE_TIMEOUT=60s
 ```
 
-### 5. Run the Application
+#### 4. Setup Development Tools
 
 ```bash
-go run cmd/main.go
+# Setup pre-commit hooks
+make setup-hooks
+
+# Run code formatting and linting
+make quality
 ```
 
-The server will start on `http://localhost:8080`
+#### 5. Run the Application
+
+```bash
+# Development mode with hot reload
+make dev
+
+# Or regular run
+make run
+```
+
+## 🔧 Development Tools
+
+### Available Make Commands
+
+```bash
+# Code Quality
+make fmt           # Format code with gofmt
+make imports       # Organize imports with goimports
+make lint          # Run golangci-lint
+make vet           # Run go vet
+make quality       # Run all quality checks
+
+# Testing
+make test          # Run tests
+make coverage      # Run tests with coverage report
+
+# Building
+make build         # Build binary
+make build-linux   # Build for Linux
+make clean         # Clean build artifacts
+
+# Development
+make run           # Run application
+make dev           # Run with hot reload (requires air)
+make deps          # Install dependencies
+make tidy          # Tidy go modules
+
+# Docker
+make docker-build  # Build Docker image
+make docker-run    # Run Docker container
+
+# Database
+make migrate-up    # Run database migrations
+
+# Security
+make security      # Run security scan (requires gosec)
+
+# Setup
+make install-tools # Install development tools
+make setup-hooks   # Setup pre-commit hooks
+
+# CI/CD
+make ci            # Simulate CI pipeline
+make help          # Show all available commands
+```
+
+### Pre-commit Hooks
+
+The project includes pre-commit hooks that run automatically before each commit:
+
+- **Go formatting** (gofmt)
+- **Import organization** (goimports)
+- **Go vet** checks
+- **Go mod tidy**
+- **Linting** (golangci-lint)
+- **Security scanning** (gosec)
+- **YAML/JSON validation**
+- **Trailing whitespace removal**
+
+Install hooks:
+```bash
+make setup-hooks
+```
+
+### Code Quality Tools
+
+- **golangci-lint**: Comprehensive Go linting
+- **gofmt**: Code formatting
+- **goimports**: Import organization
+- **gosec**: Security vulnerability scanning
+- **go vet**: Static analysis
 
 ## 📚 API Documentation
 
-### Base URL
-```
-http://localhost:8080/api/v1
-```
+For comprehensive API documentation including all endpoints, request/response formats, authentication flows, and examples, see **[API.md](API.md)**.
 
-### Response Format
-All API responses follow this standard format:
-```json
-{
-  "status_code": 200,
-  "error_message": null,
-  "data": { ... }
-}
-```
+### Quick API Overview
 
-### User Endpoints
+- **Base URL**: `http://localhost:8080/api/v1`
+- **Authentication**: JWT Bearer tokens
+- **Response Format**: Standardized JSON responses
+- **Health Check**: `GET /health`
 
-#### Create User
-```http
-POST /api/v1/users
-Content-Type: application/json
+### Key Endpoints
 
-{
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "securepassword",
-  "display_name": "John Doe",
-  "avatar_url": "https://example.com/avatar.jpg"
-}
-```
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/auth/register` | Register new user | No |
+| POST | `/auth/login` | User login | No |
+| GET | `/auth/profile` | Get user profile | Yes |
+| GET | `/users` | List users | No |
+| POST | `/posts` | Create post | Yes |
+| GET | `/posts` | List posts | No |
+| POST | `/posts/post-comments/{id}` | Create comment | Yes |
+| GET | `/posts/post-comments/{id}` | Get comments | No |
 
-#### Get User by ID
-```http
-GET /api/v1/users/{id}
-```
+For detailed documentation with request/response examples, authentication flows, error handling, and testing instructions, see **[API.md](API.md)**.
 
-#### Get User by Username
-```http
-GET /api/v1/users/username/{username}
-```
+## 🔒 Environment Variables
 
-#### List Users
-```http
-GET /api/v1/users?limit=10&offset=0
-```
+### Required Variables
 
-#### Update User
-```http
-PUT /api/v1/users/{id}
-Content-Type: application/json
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `JWT_SECRET_KEY` | JWT signing key (min 32 chars) | `your-super-secret-jwt-key-that-is-at-least-32-characters-long` |
+| `DB_HOST` | Database host | `localhost` |
+| `DB_USER` | Database user | `postgres` |
+| `DB_NAME` | Database name | `post_comments_db` |
 
-{
-  "email": "newemail@example.com",
-  "display_name": "New Display Name"
-}
-```
+### Optional Variables
 
-#### Delete User
-```http
-DELETE /api/v1/users/{id}
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | Server port |
+| `DB_PORT` | `5432` | Database port |
+| `DB_PASSWORD` | `` | Database password |
+| `DB_SSLMODE` | `disable` | Database SSL mode |
+| `ENVIRONMENT` | `development` | Environment (development/staging/production) |
+| `LOG_LEVEL` | `info` | Log level (debug/info/warn/error) |
+| `DEBUG` | `false` | Debug mode |
+| `JWT_ACCESS_TOKEN_DURATION` | `15m` | Access token duration |
+| `JWT_REFRESH_TOKEN_DURATION` | `168h` | Refresh token duration |
 
-### Post Endpoints
+For a complete list of environment variables, see `.env.example`.
 
-#### Create Post
-```http
-POST /api/v1/posts
-Content-Type: application/json
-X-User-ID: {user_uuid}
+## 🧪 Testing
 
-{
-  "title": "My First Post",
-  "content": "This is the content of my first post."
-}
+```bash
+# Run all tests
+make test
+
+# Run tests with coverage
+make coverage
+
+# Run specific package tests
+go test ./services/...
 ```
 
-#### Get Post by ID
-```http
-GET /api/v1/posts/{id}
+## 🚀 Deployment
+
+### Docker Deployment
+
+```bash
+# Build production image
+docker build -t post-comments-service:latest .
+
+# Run with environment file
+docker run -p 8080:8080 --env-file .env post-comments-service:latest
 ```
 
-#### Get Post with Comments
-```http
-GET /api/v1/posts/{id}/comments
+### Binary Deployment
+
+```bash
+# Build for Linux
+make build-linux
+
+# Copy binary and run on server
+./post-comments-service_unix
 ```
 
-#### List Posts
-```http
-GET /api/v1/posts?limit=10&offset=0
-```
+## 🔧 Configuration Validation
 
-#### List Posts by User
-```http
-GET /api/v1/users/{userId}/posts?limit=10&offset=0
-```
+The application validates all configuration on startup and will fail to start if:
 
-#### Update Post
-```http
-PUT /api/v1/posts/{id}
-Content-Type: application/json
-X-User-ID: {user_uuid}
-
-{
-  "title": "Updated Title",
-  "content": "Updated content"
-}
-```
-
-#### Delete Post
-```http
-DELETE /api/v1/posts/{id}
-X-User-ID: {user_uuid}
-```
-
-### Health Check
-```http
-GET /health
-```
+- Required environment variables are missing
+- JWT secret key is less than 32 characters
+- Database connection parameters are invalid
+- Port numbers are out of range
+- Duration values are invalid
 
 ## 🗄️ Database Schema
 
@@ -267,63 +414,71 @@ GET /health
 - `created_at` (TIMESTAMP)
 - `deleted_at` (TIMESTAMP)
 
-## 🔧 Development
-
-### Running Tests
-```bash
-go test ./...
-```
-
-### Building for Production
-```bash
-go build -o bin/post-comments-service cmd/main.go
-```
-
-### Docker Support (Future Enhancement)
-```dockerfile
-# Dockerfile example
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go build -o main cmd/main.go
-
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/main .
-CMD ["./main"]
-```
-
-## 🚧 Future Enhancements
-
-- [ ] JWT Authentication implementation
-- [ ] Comment CRUD operations
-- [ ] File upload for avatars
-- [ ] Real-time notifications
-- [ ] Rate limiting
-- [ ] Caching with Redis
-- [ ] Full-text search
-- [ ] API versioning
-- [ ] Swagger documentation
-- [ ] Docker containerization
-- [ ] Unit and integration tests
-- [ ] CI/CD pipeline
-
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Make your changes
+4. Run quality checks (`make quality`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+### Development Workflow
+
+1. **Setup**: `make install-tools && make setup-hooks`
+2. **Code**: Make your changes
+3. **Quality**: `make quality` (runs formatting, linting, vetting)
+4. **Test**: `make test`
+5. **Build**: `make build`
+6. **Commit**: Git will automatically run pre-commit hooks
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Troubleshooting
+
+### Common Issues
+
+1. **Config validation errors**: Check your `.env` file against `.env.example`
+2. **Database connection issues**: Ensure PostgreSQL is running and credentials are correct
+3. **Port already in use**: Change the `PORT` environment variable
+4. **JWT errors**: Ensure `JWT_SECRET_KEY` is at least 32 characters long
+
+### Docker Issues
+
+```bash
+# Rebuild containers
+docker-compose down && docker-compose up --build
+
+# View logs
+docker-compose logs -f app
+
+# Reset database
+docker-compose down -v && docker-compose up
+```
+
+### Development Issues
+
+```bash
+# Clean and rebuild
+make clean && make build
+
+# Update dependencies
+go mod tidy
+
+# Reset pre-commit hooks
+make setup-hooks
+```
+
+## 📞 Support
+
+For support, please open an issue in the GitHub repository or contact the development team.
 
 ## 👥 Authors
 
-- **Tejas Thombare** - *Initial work* - [TejasThombare20](https://github.com/TejasThombare20)
+- **Your Name** - *Initial work*
 
 ## 🙏 Acknowledgments
 
@@ -331,345 +486,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - GORM ORM
 - PostgreSQL
 - Go community 
-
-## Authentication System
-
-### JWT-Based Authentication
-
-The service implements a robust JWT-based authentication system with the following features:
-
-#### Token Types
-- **Access Token**: Short-lived token (15 minutes) for API access
-- **Refresh Token**: Long-lived token (7 days) for obtaining new access tokens
-
-#### Authentication Endpoints
-
-| Method | Endpoint | Description | Authentication |
-|--------|----------|-------------|----------------|
-| POST | `/api/v1/auth/register` | Register a new user | Public |
-| POST | `/api/v1/auth/login` | Login user | Public |
-| POST | `/api/v1/auth/refresh` | Refresh access token | Public |
-| POST | `/api/v1/auth/logout` | Logout user | Public |
-| GET | `/api/v1/auth/profile` | Get user profile | Required |
-| POST | `/api/v1/auth/change-password` | Change password | Required |
-
-#### Registration Request
-```json
-{
-  "username": "johndoe",
-  "email": "john@example.com",
-  "password": "securepassword123",
-  "display_name": "John Doe",
-  "avatar_url": "https://example.com/avatar.jpg"
-}
-```
-
-#### Login Request
-```json
-{
-  "username": "johndoe",
-  "password": "securepassword123"
-}
-```
-
-#### Authentication Response
-```json
-{
-  "status_code": 200,
-  "error_message": null,
-  "data": {
-    "user": {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "username": "johndoe",
-      "email": "john@example.com",
-      "display_name": "John Doe",
-      "avatar_url": "https://example.com/avatar.jpg",
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    },
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expires_at": "2024-01-01T00:15:00Z"
-  }
-}
-```
-
-#### Using Authentication
-
-Include the access token in the Authorization header:
-```
-Authorization: Bearer <access_token>
-```
-
-### Protected Endpoints
-
-The following endpoints require authentication:
-
-#### User Management
-- `POST /api/v1/users` - Create user
-- `PUT /api/v1/users/user/:id` - Update user
-- `DELETE /api/v1/users/user/:id` - Delete user
-
-#### Post Management
-- `POST /api/v1/posts` - Create post
-- `PUT /api/v1/posts/post/:id` - Update post
-- `DELETE /api/v1/posts/post/:id` - Delete post
-
-#### Comment Management
-- `POST /api/v1/comments` - Create comment
-- `PUT /api/v1/comments/:id` - Update comment
-- `DELETE /api/v1/comments/:id` - Delete comment
-
-### Public Endpoints
-
-The following endpoints are publicly accessible:
-
-#### User Information (Read-only)
-- `GET /api/v1/users` - List users
-- `GET /api/v1/users/username/:username` - Get user by username
-- `GET /api/v1/users/user/:id` - Get user by ID
-- `GET /api/v1/users/:userId/posts` - Get user's posts
-
-#### Post Information (Read-only)
-- `GET /api/v1/posts` - List posts
-- `GET /api/v1/posts/post/:id` - Get post by ID
-- `GET /api/v1/posts/post/:id/comments` - Get post with comments
-
-## API Endpoints
-
-### Authentication
-
-| Method | Endpoint | Description | Body | Response |
-|--------|----------|-------------|------|----------|
-| POST | `/api/v1/auth/register` | Register new user | RegisterRequest | AuthResponse |
-| POST | `/api/v1/auth/login` | Login user | LoginRequest | AuthResponse |
-| POST | `/api/v1/auth/refresh` | Refresh token | RefreshTokenRequest | AuthResponse |
-| POST | `/api/v1/auth/logout` | Logout user | - | Success |
-| GET | `/api/v1/auth/profile` | Get profile | - | UserResponse |
-| POST | `/api/v1/auth/change-password` | Change password | ChangePasswordRequest | Success |
-
-### Users
-
-| Method | Endpoint | Description | Authentication | Body | Response |
-|--------|----------|-------------|----------------|------|----------|
-| POST | `/api/v1/users` | Create user | Required | CreateUserRequest | UserResponse |
-| GET | `/api/v1/users` | List users | Optional | - | []UserResponse |
-| GET | `/api/v1/users/user/:id` | Get user by ID | Optional | - | UserResponse |
-| GET | `/api/v1/users/username/:username` | Get user by username | Optional | - | UserResponse |
-| PUT | `/api/v1/users/user/:id` | Update user | Required | UpdateUserRequest | UserResponse |
-| DELETE | `/api/v1/users/user/:id` | Delete user | Required | - | Success |
-| GET | `/api/v1/users/:userId/posts` | Get user's posts | Optional | - | []PostResponse |
-
-### Posts
-
-| Method | Endpoint | Description | Authentication | Body | Response |
-|--------|----------|-------------|----------------|------|----------|
-| POST | `/api/v1/posts` | Create post | Required | CreatePostRequest | PostResponse |
-| GET | `/api/v1/posts` | List posts | Optional | - | []PostResponse |
-| GET | `/api/v1/posts/post/:id` | Get post by ID | Optional | - | PostResponse |
-| PUT | `/api/v1/posts/post/:id` | Update post | Required | UpdatePostRequest | PostResponse |
-| DELETE | `/api/v1/posts/post/:id` | Delete post | Required | - | Success |
-| GET | `/api/v1/posts/post/:id/comments` | Get post with comments | Optional | - | PostWithCommentsResponse |
-
-### Comments (Future Implementation)
-
-| Method | Endpoint | Description | Authentication | Body | Response |
-|--------|----------|-------------|----------------|------|----------|
-| POST | `/api/v1/comments` | Create comment | Required | CreateCommentRequest | CommentResponse |
-| GET | `/api/v1/comments/:id` | Get comment by ID | Optional | - | CommentResponse |
-| PUT | `/api/v1/comments/:id` | Update comment | Required | UpdateCommentRequest | CommentResponse |
-| DELETE | `/api/v1/comments/:id` | Delete comment | Required | - | Success |
-
-## Environment Variables
-
-```env
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-DB_NAME=post_comments_db
-DB_SSLMODE=disable
-
-# Server Configuration
-PORT=8080
-
-# Environment
-ENV=development
-
-# JWT Configuration
-JWT_SECRET_KEY=your-super-secret-jwt-key-change-this-in-production-min-32-chars
-JWT_ACCESS_TOKEN_TTL=15m
-JWT_REFRESH_TOKEN_TTL=168h
-
-# CORS Configuration
-CORS_ALLOWED_ORIGINS=*
-CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,OPTIONS
-CORS_ALLOWED_HEADERS=Origin,Content-Type,Accept,Authorization,X-User-ID
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Go 1.23 or higher
-- PostgreSQL 12 or higher
-- Git
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd post-comments-service
-```
-
-2. Install dependencies:
-```bash
-go mod download
-```
-
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-4. Set up the database:
-```bash
-# Create database
-createdb post_comments_db
-
-# Run migrations
-go run cmd/migrate.go
-```
-
-5. Build and run the application:
-```bash
-go build -o main cmd/main.go
-./main
-```
-
-The server will start on `http://localhost:8080`
-
-### Docker Setup
-
-1. Start the services:
-```bash
-docker-compose up -d
-```
-
-2. The API will be available at `http://localhost:8080`
-
-## Usage Examples
-
-### Authentication Flow
-
-1. **Register a new user:**
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "johndoe",
-    "email": "john@example.com",
-    "password": "securepassword123",
-    "display_name": "John Doe"
-  }'
-```
-
-2. **Login:**
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "johndoe",
-    "password": "securepassword123"
-  }'
-```
-
-3. **Use the access token for protected endpoints:**
-```bash
-curl -X POST http://localhost:8080/api/v1/posts \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <access_token>" \
-  -d '{
-    "title": "My First Post",
-    "content": "This is the content of my first post."
-  }'
-```
-
-4. **Refresh token when access token expires:**
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refresh_token": "<refresh_token>"
-  }'
-```
-
-### Creating a Post
-
-```bash
-curl -X POST http://localhost:8080/api/v1/posts \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <access_token>" \
-  -d '{
-    "title": "My Post Title",
-    "content": "This is the content of my post.",
-    "tags": ["technology", "programming"]
-  }'
-```
-
-### Getting Posts
-
-```bash
-# Get all posts (public)
-curl http://localhost:8080/api/v1/posts
-
-# Get specific post (public)
-curl http://localhost:8080/api/v1/posts/post/{post_id}
-
-# Get posts by user (public)
-curl http://localhost:8080/api/v1/users/{user_id}/posts
-```
-
-## Security Features
-
-- **Password Hashing**: Passwords are hashed using bcrypt
-- **JWT Tokens**: Secure token-based authentication
-- **Token Expiration**: Access tokens expire in 15 minutes
-- **Refresh Tokens**: Long-lived tokens for seamless user experience
-- **CORS Protection**: Configurable CORS settings
-- **Input Validation**: Comprehensive request validation
-- **SQL Injection Protection**: Parameterized queries
-- **Authorization**: User can only modify their own resources
-
-## Architecture
-
-The application follows a clean architecture pattern:
-
-```
-├── cmd/                    # Application entry points
-├── config/                 # Configuration management
-├── controllers/            # HTTP handlers
-├── middleware/             # HTTP middleware
-├── models/                 # Data models and DTOs
-├── repository/             # Data access layer
-├── routes/                 # Route definitions
-├── services/               # Business logic layer
-├── utils/                  # Utility functions
-├── validator/              # Request validation
-└── migrations/             # Database migrations
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
