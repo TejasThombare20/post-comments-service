@@ -58,8 +58,7 @@ post-comments-service/
 │   └── routes.go                  # Route definitions
 ├── middleware/
 │   ├── logger.go                  # Logging middleware
-│   ├── auth.go                    # Authentication middleware
-│   └── cors.go                    # CORS middleware
+│   └── auth.go                    # Authentication middleware
 ├── utils/
 │   ├── response.go                # Standard API response helpers
 │   ├── error_handler.go           # Error handling utilities
