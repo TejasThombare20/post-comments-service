@@ -22,11 +22,29 @@ type RegisterRequest struct {
 }
 
 // AuthResponse represents the response payload for authentication
+// NOTE: This includes refresh_token and should only be used for login/register endpoints
 type AuthResponse struct {
 	User         UserResponse `json:"user"`
 	AccessToken  string       `json:"access_token"`
 	RefreshToken string       `json:"refresh_token"`
 	ExpiresAt    time.Time    `json:"expires_at"`
+}
+
+// SecureAuthResponse represents the secure response payload for authentication
+// This excludes refresh_token for better security
+type SecureAuthResponse struct {
+	User        UserResponse `json:"user"`
+	AccessToken string       `json:"access_token"`
+	ExpiresAt   time.Time    `json:"expires_at"`
+}
+
+// ToSecureResponse converts AuthResponse to SecureAuthResponse
+func (a *AuthResponse) ToSecureResponse() SecureAuthResponse {
+	return SecureAuthResponse{
+		User:        a.User,
+		AccessToken: a.AccessToken,
+		ExpiresAt:   a.ExpiresAt,
+	}
 }
 
 // RefreshTokenRequest represents the request payload for token refresh

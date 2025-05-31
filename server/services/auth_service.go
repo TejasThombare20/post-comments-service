@@ -46,6 +46,7 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		Email:       req.Email,
 		Password:    req.Password,
 		DisplayName: req.DisplayName,
+		AvatarURL:   req.AvatarURL,
 	}
 
 	user, err := s.userService.CreateUser(createUserReq)

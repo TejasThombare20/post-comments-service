@@ -8,15 +8,17 @@ import (
 
 // Comment represents a comment in the system with support for nested comments
 type Comment struct {
-	ID        uuid.UUID   `json:"id" db:"id"`
-	Content   string      `json:"content" db:"content"`
-	PostID    uuid.UUID   `json:"post_id" db:"post_id"`
-	ParentID  *uuid.UUID  `json:"parent_id" db:"parent_id"`
-	Path      []uuid.UUID `json:"path" db:"path"`
-	ThreadID  uuid.UUID   `json:"thread_id" db:"thread_id"`
-	CreatedBy *uuid.UUID  `json:"created_by" db:"created_by"`
-	CreatedAt time.Time   `json:"created_at" db:"created_at"`
-	DeletedAt *time.Time  `json:"-" db:"deleted_at"`
+	ID           uuid.UUID   `json:"id" db:"id"`
+	Content      string      `json:"content" db:"content"`
+	PostID       uuid.UUID   `json:"post_id" db:"post_id"`
+	ParentID     *uuid.UUID  `json:"parent_id" db:"parent_id"`
+	Path         []uuid.UUID `json:"path" db:"path"`
+	ThreadID     uuid.UUID   `json:"thread_id" db:"thread_id"`
+	CreatedBy    *uuid.UUID  `json:"created_by" db:"created_by"`
+	CreatedAt    time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time   `json:"updated_at" db:"updated_at"`
+	RepliesCount int         `json:"replies_count" db:"replies_count"`
+	DeletedAt    *time.Time  `json:"-" db:"deleted_at"`
 
 	// Associations (loaded separately)
 	Post     *Post     `json:"post,omitempty"`
@@ -56,16 +58,18 @@ type ListCommentsRequest struct {
 
 // CommentResponse represents the response payload for comment data
 type CommentResponse struct {
-	ID        uuid.UUID         `json:"id"`
-	Content   string            `json:"content"`
-	PostID    uuid.UUID         `json:"post_id"`
-	ParentID  *uuid.UUID        `json:"parent_id"`
-	Path      []uuid.UUID       `json:"path"`
-	ThreadID  uuid.UUID         `json:"thread_id"`
-	CreatedBy *uuid.UUID        `json:"created_by"`
-	Author    *UserResponse     `json:"author,omitempty"`
-	Children  []CommentResponse `json:"children,omitempty"`
-	CreatedAt time.Time         `json:"created_at"`
+	ID           uuid.UUID         `json:"id"`
+	Content      string            `json:"content"`
+	PostID       uuid.UUID         `json:"post_id"`
+	ParentID     *uuid.UUID        `json:"parent_id"`
+	Path         []uuid.UUID       `json:"path"`
+	ThreadID     uuid.UUID         `json:"thread_id"`
+	CreatedBy    *uuid.UUID        `json:"created_by"`
+	Author       *UserResponse     `json:"author,omitempty"`
+	Children     []CommentResponse `json:"children,omitempty"`
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
+	RepliesCount int               `json:"replies_count"`
 }
 
 // ToResponse converts Comment model to CommentResponse
@@ -82,15 +86,17 @@ func (c *Comment) ToResponse() CommentResponse {
 	}
 
 	return CommentResponse{
-		ID:        c.ID,
-		Content:   c.Content,
-		PostID:    c.PostID,
-		ParentID:  c.ParentID,
-		Path:      c.Path,
-		ThreadID:  c.ThreadID,
-		CreatedBy: c.CreatedBy,
-		Author:    author,
-		Children:  children,
-		CreatedAt: c.CreatedAt,
+		ID:           c.ID,
+		Content:      c.Content,
+		PostID:       c.PostID,
+		ParentID:     c.ParentID,
+		Path:         c.Path,
+		ThreadID:     c.ThreadID,
+		CreatedBy:    c.CreatedBy,
+		Author:       author,
+		Children:     children,
+		CreatedAt:    c.CreatedAt,
+		UpdatedAt:    c.UpdatedAt,
+		RepliesCount: c.RepliesCount,
 	}
 }

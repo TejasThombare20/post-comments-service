@@ -51,7 +51,9 @@ func (s *commentService) CreateComment(userID uuid.UUID, req *models.CreateComme
 		return nil, utils.WrapError(err, "invalid post_id format")
 	}
 
-	if _, err = s.userRepo.GetByID(userID); err != nil {
+	// Get user data (we'll need this for the response)
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
 		return nil, utils.WrapError(err, "failed to find user")
 	}
 
@@ -66,12 +68,14 @@ func (s *commentService) CreateComment(userID uuid.UUID, req *models.CreateComme
 	sanitizedContent := s.htmlSanitizer.ProcessCommentContent(*req.Content)
 
 	comment := &models.Comment{
-		ID:        uuid.New(),
-		Content:   sanitizedContent,
-		PostID:    postID,
-		CreatedBy: &userID,
-		CreatedAt: time.Now(),
-		Path:      []uuid.UUID{},
+		ID:           uuid.New(),
+		Content:      sanitizedContent,
+		PostID:       postID,
+		CreatedBy:    &userID,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		RepliesCount: 0,
+		Path:         []uuid.UUID{},
 	}
 
 	if req.ParentID != nil && *req.ParentID != "" {
@@ -91,7 +95,7 @@ func (s *commentService) CreateComment(userID uuid.UUID, req *models.CreateComme
 
 		comment.ParentID = &parentID
 		comment.ThreadID = parentComment.ThreadID
-		comment.Path = append(parentComment.Path, parentID)
+		comment.Path = append(parentComment.Path, comment.ID)
 	} else {
 		comment.ThreadID = comment.ID
 		comment.Path = append(comment.Path, comment.ID)
@@ -101,12 +105,10 @@ func (s *commentService) CreateComment(userID uuid.UUID, req *models.CreateComme
 		return nil, utils.WrapError(err, "failed to create comment")
 	}
 
-	createdComment, err := s.commentRepo.GetByIDWithAuthor(comment.ID)
-	if err != nil {
-		return nil, utils.WrapError(err, "failed to get created comment with author")
-	}
+	// Set the author data directly instead of making another DB call
+	comment.Author = user
 
-	return createdComment, nil
+	return comment, nil
 }
 
 // GetCommentByID retrieves a comment by ID with author information
@@ -244,4 +246,11 @@ func (s *commentService) GetCommentReplies(commentID uuid.UUID, limit, offset in
 	}
 
 	return replies, nil
+}
+
+// incrementRepliesCount increments the replies count for a comment
+// NOTE: This should only be used for manual corrections or data migration.
+// Normal reply creation automatically increments the count via database trigger.
+func (s *commentService) incrementRepliesCount(commentID uuid.UUID) error {
+	return s.commentRepo.IncrementRepliesCount(commentID)
 }

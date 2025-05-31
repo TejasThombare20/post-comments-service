@@ -2,12 +2,14 @@ package utils
 
 import (
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
 // APIResponse represents the standard API response structure
 type APIResponse struct {
 	StatusCode   int         `json:"status_code"`
+	Success      bool        `json:"success"`
 	ErrorMessage *string     `json:"error_message"`
 	Data         interface{} `json:"data"`
 }
@@ -16,6 +18,7 @@ type APIResponse struct {
 func SuccessResponse(c *gin.Context, statusCode int, data interface{}) {
 	c.JSON(statusCode, APIResponse{
 		StatusCode:   statusCode,
+		Success:      true,
 		ErrorMessage: nil,
 		Data:         data,
 	})
@@ -25,6 +28,7 @@ func SuccessResponse(c *gin.Context, statusCode int, data interface{}) {
 func ErrorResponse(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, APIResponse{
 		StatusCode:   statusCode,
+		Success:      false,
 		ErrorMessage: &message,
 		Data:         nil,
 	})

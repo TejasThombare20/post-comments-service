@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/TejasThombare20/post-comments-service/models"
 	"github.com/TejasThombare20/post-comments-service/repository"
 	"github.com/TejasThombare20/post-comments-service/utils"
@@ -54,6 +56,9 @@ func (s *userService) CreateUser(req *models.CreateUserRequest) (*models.User, e
 		Email:        req.Email,
 		PasswordHash: &[]string{string(hashedPassword)}[0],
 		DisplayName:  req.DisplayName,
+		AvatarURL:    req.AvatarURL,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	err = s.userRepo.Create(user)

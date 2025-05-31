@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/TejasThombare20/post-comments-service/models"
 	"github.com/TejasThombare20/post-comments-service/repository"
 	"github.com/TejasThombare20/post-comments-service/utils"
@@ -45,6 +47,8 @@ func (s *postService) CreatePost(req *models.CreatePostRequest, userID uuid.UUID
 		Title:     req.Title,
 		Content:   req.Content,
 		CreatedBy: userID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	// Save post to database

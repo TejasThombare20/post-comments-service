@@ -7,7 +7,9 @@
         "type": "go",
         "request": "launch",
         "mode": "auto",  // Or "debug" for standard debugging
-        "program": "${workspaceFolder}/cmd"
+        "program": "${workspaceFolder}/server/cmd",
+          "envFile": "${workspaceFolder}/server/.env",
+      "cwd": "${workspaceFolder}/server"
       }
     ]
   }

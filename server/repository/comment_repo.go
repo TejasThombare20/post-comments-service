@@ -21,6 +21,7 @@ type CommentRepository interface {
 	Delete(id uuid.UUID) error
 	ListByPost(postID uuid.UUID, limit, offset int) ([]models.Comment, error)
 	GetReplies(parentID uuid.UUID, limit, offset int) ([]models.Comment, error)
+	IncrementRepliesCount(commentID uuid.UUID) error
 }
 
 // commentRepository implements CommentRepository interface
@@ -56,8 +57,8 @@ func convertStringArrayToUUIDSlice(strings pq.StringArray) []uuid.UUID {
 // Create creates a new comment in the database
 func (r *commentRepository) Create(comment *models.Comment) error {
 	query := `
-		INSERT INTO comments (id, content, post_id, parent_id, path, thread_id, created_by, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+		INSERT INTO comments (id, content, post_id, parent_id, path, thread_id, created_by, created_at, updated_at, replies_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 
 	pathArray := convertUUIDSliceToStringArray(comment.Path)
 
@@ -70,6 +71,8 @@ func (r *commentRepository) Create(comment *models.Comment) error {
 		comment.ThreadID,
 		comment.CreatedBy,
 		comment.CreatedAt,
+		comment.UpdatedAt,
+		comment.RepliesCount,
 	)
 
 	if err != nil {
@@ -82,7 +85,7 @@ func (r *commentRepository) Create(comment *models.Comment) error {
 // GetByID retrieves a comment by ID
 func (r *commentRepository) GetByID(id uuid.UUID) (*models.Comment, error) {
 	query := `
-		SELECT id, content, post_id, parent_id, path, thread_id, created_by, created_at
+		SELECT id, content, post_id, parent_id, path, thread_id, created_by, created_at, updated_at, replies_count
 		FROM comments 
 		WHERE id = $1 AND deleted_at IS NULL`
 
@@ -98,6 +101,8 @@ func (r *commentRepository) GetByID(id uuid.UUID) (*models.Comment, error) {
 		&comment.ThreadID,
 		&comment.CreatedBy,
 		&comment.CreatedAt,
+		&comment.UpdatedAt,
+		&comment.RepliesCount,
 	)
 
 	if err != nil {
@@ -114,7 +119,7 @@ func (r *commentRepository) GetByID(id uuid.UUID) (*models.Comment, error) {
 // GetByIDWithAuthor retrieves a comment by ID with author information
 func (r *commentRepository) GetByIDWithAuthor(id uuid.UUID) (*models.Comment, error) {
 	query := `
-		SELECT c.id, c.content, c.post_id, c.parent_id, c.path, c.thread_id, c.created_by, c.created_at,
+		SELECT c.id, c.content, c.post_id, c.parent_id, c.path, c.thread_id, c.created_by, c.created_at, c.updated_at, c.replies_count,
 		       u.id, u.username, u.email, u.display_name, u.avatar_url, u.created_at, u.updated_at
 		FROM comments c
 		JOIN users u ON c.created_by = u.id
@@ -133,6 +138,8 @@ func (r *commentRepository) GetByIDWithAuthor(id uuid.UUID) (*models.Comment, er
 		&comment.ThreadID,
 		&comment.CreatedBy,
 		&comment.CreatedAt,
+		&comment.UpdatedAt,
+		&comment.RepliesCount,
 		&author.ID,
 		&author.Username,
 		&author.Email,
@@ -167,8 +174,13 @@ func (r *commentRepository) Update(id uuid.UUID, updates *models.UpdateCommentRe
 		argIndex++
 	}
 
-	if len(setParts) == 0 {
-		// No updates to perform, just return the current comment
+	// Always update updated_at when any field is updated
+	setParts = append(setParts, fmt.Sprintf("updated_at = $%d", argIndex))
+	args = append(args, time.Now())
+	argIndex++
+
+	if len(setParts) == 1 { // Only updated_at was added
+		// No actual content updates to perform, just return the current comment
 		return r.GetByIDWithAuthor(id)
 	}
 
@@ -228,7 +240,7 @@ func (r *commentRepository) Delete(id uuid.UUID) error {
 // ListByPost retrieves a paginated list of comments for a specific post
 func (r *commentRepository) ListByPost(postID uuid.UUID, limit, offset int) ([]models.Comment, error) {
 	query := `
-		SELECT c.id, c.content, c.post_id, c.parent_id, c.path, c.thread_id, c.created_by, c.created_at,
+		SELECT c.id, c.content, c.post_id, c.parent_id, c.path, c.thread_id, c.created_by, c.created_at, c.updated_at, c.replies_count,
 		       u.id, u.username, u.email, u.display_name, u.avatar_url, u.created_at, u.updated_at
 		FROM comments c
 		LEFT JOIN users u ON c.created_by = u.id AND u.deleted_at IS NULL
@@ -264,6 +276,8 @@ func (r *commentRepository) ListByPost(postID uuid.UUID, limit, offset int) ([]m
 			&comment.ThreadID,
 			&comment.CreatedBy,
 			&comment.CreatedAt,
+			&comment.UpdatedAt,
+			&comment.RepliesCount,
 			&authorID,
 			&authorUsername,
 			&authorEmail,
@@ -311,7 +325,7 @@ func (r *commentRepository) ListByPost(postID uuid.UUID, limit, offset int) ([]m
 // GetReplies retrieves replies to a specific comment
 func (r *commentRepository) GetReplies(parentID uuid.UUID, limit, offset int) ([]models.Comment, error) {
 	query := `
-		SELECT c.id, c.content, c.post_id, c.parent_id, c.path, c.thread_id, c.created_by, c.created_at,
+		SELECT c.id, c.content, c.post_id, c.parent_id, c.path, c.thread_id, c.created_by, c.created_at, c.updated_at, c.replies_count,
 		       u.id, u.username, u.email, u.display_name, u.avatar_url, u.created_at, u.updated_at
 		FROM comments c
 		LEFT JOIN users u ON c.created_by = u.id AND u.deleted_at IS NULL
@@ -347,6 +361,8 @@ func (r *commentRepository) GetReplies(parentID uuid.UUID, limit, offset int) ([
 			&comment.ThreadID,
 			&comment.CreatedBy,
 			&comment.CreatedAt,
+			&comment.UpdatedAt,
+			&comment.RepliesCount,
 			&authorID,
 			&authorUsername,
 			&authorEmail,
@@ -389,4 +405,30 @@ func (r *commentRepository) GetReplies(parentID uuid.UUID, limit, offset int) ([
 	}
 
 	return comments, nil
+}
+
+// IncrementRepliesCount increments the replies count for a comment
+// NOTE: This should only be used for manual corrections or data migration.
+// Normal reply creation automatically increments the count via database trigger.
+func (r *commentRepository) IncrementRepliesCount(commentID uuid.UUID) error {
+	query := `
+		UPDATE comments 
+		SET replies_count = replies_count + 1, updated_at = $1 
+		WHERE id = $2 AND deleted_at IS NULL`
+
+	result, err := r.db.Exec(query, time.Now(), commentID)
+	if err != nil {
+		return utils.WrapError(err, "failed to increment replies count")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return utils.WrapError(err, "failed to get rows affected")
+	}
+
+	if rowsAffected == 0 {
+		return utils.ErrCommentNotFound
+	}
+
+	return nil
 }
