@@ -125,7 +125,6 @@ docker-compose down
 - **API**: http://localhost:8080
 - **Health Check**: http://localhost:8080/health
 - **Database Admin (Adminer)**: http://localhost:8081
-- **Redis**: localhost:6379
 
 ### Option 2: Local Development Setup
 
