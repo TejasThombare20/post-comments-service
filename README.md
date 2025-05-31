@@ -100,18 +100,5 @@ Both applications are deployed and ready to use:
 - **Frontend** is deployed on Vercel with automatic deployments from the main branch
 - **Backend** is deployed on Render with PostgreSQL database
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
----
 
 For specific setup instructions and detailed documentation, please refer to the individual README files in the `client` and `server` directories. 
