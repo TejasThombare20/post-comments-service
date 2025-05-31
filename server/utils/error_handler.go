@@ -53,7 +53,7 @@ func GetErrorMessages() ErrorMessages {
 	}
 }
 
-// WrapError wraps an error with additional context
+
 func WrapError(err error, context string) error {
 	if err == nil {
 		return nil

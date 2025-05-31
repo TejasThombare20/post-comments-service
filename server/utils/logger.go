@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 
 // Logger is the global logger instance
 var Logger *logrus.Logger
+var loggerOnce sync.Once
 
 // LogFields represents structured log fields
 type LogFields map[string]interface{}
@@ -25,8 +27,20 @@ type RequestContext struct {
 	IP        string
 }
 
-// InitLogger initializes the global logger
-func InitLogger() {
+// init automatically initializes the logger when the package is imported
+func init() {
+	ensureLoggerInitialized()
+}
+
+// ensureLoggerInitialized ensures the logger is initialized (thread-safe)
+func ensureLoggerInitialized() {
+	loggerOnce.Do(func() {
+		initializeLogger()
+	})
+}
+
+// initializeLogger performs the actual logger initialization
+func initializeLogger() {
 	Logger = logrus.New()
 
 	// Set output to stdout (can be redirected to cloud logging)
@@ -49,12 +63,17 @@ func InitLogger() {
 	} else {
 		Logger.SetLevel(logrus.DebugLevel)
 	}
+}
 
+// InitLogger initializes the global logger (public function for explicit initialization)
+func InitLogger() {
+	ensureLoggerInitialized()
 	Logger.Info("Logger initialized successfully")
 }
 
 // LogInfo logs info level messages with optional fields
 func LogInfo(message string, fields LogFields) {
+	ensureLoggerInitialized()
 	if fields != nil {
 		Logger.WithFields(logrus.Fields(fields)).Info(message)
 	} else {
@@ -64,6 +83,7 @@ func LogInfo(message string, fields LogFields) {
 
 // LogError logs error level messages with optional fields
 func LogError(message string, err error, fields LogFields) {
+	ensureLoggerInitialized()
 	logFields := logrus.Fields{}
 	if fields != nil {
 		logFields = logrus.Fields(fields)
@@ -76,6 +96,7 @@ func LogError(message string, err error, fields LogFields) {
 
 // LogWarn logs warning level messages with optional fields
 func LogWarn(message string, fields LogFields) {
+	ensureLoggerInitialized()
 	if fields != nil {
 		Logger.WithFields(logrus.Fields(fields)).Warn(message)
 	} else {
@@ -85,6 +106,7 @@ func LogWarn(message string, fields LogFields) {
 
 // LogDebug logs debug level messages with optional fields
 func LogDebug(message string, fields LogFields) {
+	ensureLoggerInitialized()
 	if fields != nil {
 		Logger.WithFields(logrus.Fields(fields)).Debug(message)
 	} else {
@@ -94,6 +116,7 @@ func LogDebug(message string, fields LogFields) {
 
 // LogWithContext logs with request context information
 func LogWithContext(ctx context.Context, level logrus.Level, message string, fields LogFields) {
+	ensureLoggerInitialized()
 	logFields := logrus.Fields{}
 	if fields != nil {
 		logFields = logrus.Fields(fields)
