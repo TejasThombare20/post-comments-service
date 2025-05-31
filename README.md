@@ -22,13 +22,11 @@ This project consists of two main components:
 - **Framework**: React 18 with TypeScript and Vite
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Features**: Modern UI, infinite scrolling, responsive design
-- **Deployment**: Vercel
 
 ### Backend (`/server`)
 - **Language**: Go (Golang) with Gin framework
 - **Database**: PostgreSQL with migrations
 - **Features**: JWT authentication, nested comments, RESTful API
-- **Deployment**: Render
 
 ## 🚀 Quick Start
 
